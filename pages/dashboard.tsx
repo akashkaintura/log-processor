@@ -1,24 +1,13 @@
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { Socket, io } from 'socket.io-client';
-
-interface LogStat {
-    id: string;
-    job_id: string;
-    user_id: string;
-    file_id: string;
-    errors: number;
-    keywords: Record<string, number>;
-    ips: Record<string, number>;
-    created_at: string;
-}
+import { io } from 'socket.io-client';
+import { LogStat } from '../types/log';
 
 export default function Dashboard() {
     const session = useSession();
     const supabase = useSupabaseClient();
     const router = useRouter();
-    // Replace any[] with LogStat[]
     const [stats, setStats] = useState<LogStat[]>([]);
 
     useEffect(() => {
@@ -29,8 +18,14 @@ export default function Dashboard() {
 
         fetchStats();
 
-        const socket: Socket = io();
-        socket.on('jobCompleted', async (data: { jobId: string }) => {
+        const newSocket = io('http://localhost:3000', {
+            path: '/socket.io',
+            transports: ['websocket', 'polling'],
+        });
+
+        newSocket.on('connect', () => console.log('Socket.IO connected'));
+        newSocket.on('connect_error', (err) => console.error('Socket.IO connect error:', err));
+        newSocket.on('jobCompleted', async (data: { jobId: string }) => {
             const { data: newStat, error } = await supabase
                 .from('log_stats')
                 .select('*')
@@ -47,9 +42,8 @@ export default function Dashboard() {
             }
         });
 
-        // Cleanup function
         return () => {
-            socket.disconnect();
+            newSocket.disconnect();
         };
     }, [session, router, supabase]);
 
@@ -64,7 +58,6 @@ export default function Dashboard() {
 
     const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        // Type the event target properly to avoid 'any'
         const target = e.target as HTMLFormElement;
         const fileInput = target.elements.namedItem('file') as HTMLInputElement;
         const file = fileInput?.files?.[0];
@@ -82,7 +75,7 @@ export default function Dashboard() {
             body: formData,
         });
 
-        if (!res.ok) console.error('Upload failed');
+        if (!res.ok) console.error('Upload failed:', await res.text());
     };
 
     if (!session) return null;

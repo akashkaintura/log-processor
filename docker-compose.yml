@@ -2,32 +2,43 @@ version: '3'
 services:
   nextjs:
     build: .
+    command: node server.ts
     ports:
       - '3000:3000'
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - KEYWORDS=timeout,error,failed
     depends_on:
       - redis
+    networks:
+      - app-network
 
   worker:
     build: .
     command: node worker.ts
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - KEYWORDS=timeout,error,failed
     depends_on:
       - redis
+    networks:
+      - app-network
 
   redis:
     image: redis:6
     ports:
       - '6379:6379'
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

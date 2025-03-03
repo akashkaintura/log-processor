@@ -1,0 +1,33 @@
+version: '3'
+services:
+  nextjs:
+    build: .
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - KEYWORDS=timeout,error,failed
+    depends_on:
+      - redis
+
+  worker:
+    build: .
+    command: node worker.ts
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - KEYWORDS=timeout,error,failed
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:6
+    ports:
+      - '6379:6379'
